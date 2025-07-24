@@ -32,3 +32,8 @@ variable "env" {
   type        = string
   description = "Nazwa środowiska (np. dev, test, prod)"
 }
+
+variable "subscription_id" {
+  type        = string
+  description = "twoje ID"
+}
