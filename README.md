@@ -7,7 +7,7 @@ Dzięki temu można:
 - Unikać błędów ręcznej konfiguracji.
 
 Język: HashiCorp Configuration Language (HCL)
-Dostawcy (providers): np. Azure, AWS, GCP. Ty użyjesz azurerm
+Dostawcy (providers): np. Azure, AWS, GCP. Tutaj używamy azurerm
 Zasoby (resources): jednostki, które tworzysz (np. azurerm_storage_account)
 Stan (state): Terraform przechowuje stan twojej infrastruktury w pliku terraform.tfstate, dzięki czemu wie, co już istnieje.
 

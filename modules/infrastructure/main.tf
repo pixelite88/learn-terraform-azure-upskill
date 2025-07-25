@@ -44,17 +44,17 @@ resource "azurerm_storage_account" "storage" {
 
 resource "azurerm_storage_container" "cv_safe" {
   name                  = "cv-safe" # required
-  storage_account_name  = azurerm_storage_account.storage.name # required
+  storage_account_id  = azurerm_storage_account.storage.id # required
 }
 
 resource "azurerm_storage_container" "cv_notsafe" {
   name                  = "cv-notsafe" # required
-  storage_account_name  = azurerm_storage_account.storage.name # optional
+  storage_account_id  = azurerm_storage_account.storage.id # optional
 }
 
 resource "azurerm_storage_container" "cv_quarantine" {
   name                  = "cv-quarantine" # required
-  storage_account_name  = azurerm_storage_account.storage.name # optional
+  storage_account_id  = azurerm_storage_account.storage.id # optional
 }
 
 # 4. Application Insights
