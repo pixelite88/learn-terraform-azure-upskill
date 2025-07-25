@@ -30,10 +30,10 @@ variable "github_token" {
 
 variable "env" {
   type        = string
-  description = "Nazwa środowiska (np. dev, test, prod)"
+  description = "Environment name (np. dev, test, prod)"
 }
 
 variable "subscription_id" {
   type        = string
-  description = "twoje ID"
+  description = "My subscription ID"
 }
