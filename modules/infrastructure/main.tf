@@ -11,7 +11,12 @@ terraform {
 }
 
 provider "azurerm" {
-  features {}
+  features {
+      key_vault {
+        purge_soft_delete_on_destroy    = true
+        recover_soft_deleted_key_vaults = true
+      }
+  }
   # skip_provider_registration = true
   subscription_id = var.subscription_id # Wymagane, jeśli masz wiele subskrypcji
 }
@@ -104,4 +109,25 @@ resource "azurerm_static_web_app" "frontend" {
   repository_url        = "https://github.com/pixelite88/azure-fundamentals-upskill"
   repository_branch     = "main"
   repository_token      = var.github_token
-}  
+}
+
+resource "azurerm_key_vault" "main" {
+  name                  = "cvscannerkeyvault2307" # required
+  location              = azurerm_resource_group.main.location # required
+  resource_group_name   = azurerm_resource_group.main.name # required
+  tenant_id             = data.azurerm_client_config.current.tenant_id # required
+  sku_name              = "standard" # required
+
+  
+  access_policy {
+    tenant_id = data.azurerm_client_config.current.tenant_id # required
+    object_id = data.azurerm_client_config.current.object_id  # required
+  }
+}
+
+resource "azurerm_key_vault_secret" "main" {
+  name         = "cvscannersecret2307"
+  key_vault_id = azurerm_key_vault.main.id
+}
+
+data "azurerm_client_config" "current" {} # who's logged in now and using TF. 
