@@ -35,6 +35,15 @@ Lifecycle management of Microsoft Azure using the Azure Resource Manager APIs. m
 
 31.07
 
+- zostaje modules/infrastructre, obok tego modułu nowy, moduł infrastructre ma wywoływać ww. moduły. Terraform przy terraform plan ma nie usuwać niczego. 
+- czym się rózni locals vs variable (definicja i na przykładzie)
+
+Zadanie 1: 
+Refaktoryzacja modułów:
+- blok `moved` -  pozwala zmieniać nazwę lub lokalizację zasobów/modułów bez destrukcji istniejącej infrastruktury 
+-  moved mówi Terraformowi: „zasób z adresu from przeniósł się na adres to”, dzięki czemu stan jest automatycznie aktualizowany, a zasoby fizyczne pozostają nienaruszone
+
+
 Remote backend:
 - Remote backend oznacza, że stan Terraform (plik terraform.tfstate) jest przechowywany zdalnie, a nie lokalnie. W przypadku Azure, najczęściej wykorzystuje się do tego Azure Storage Account.
 
@@ -56,6 +65,32 @@ az storage account create --name cvtfstatedev --resource-group cv-terraform-stat
 az storage container create --name terraform-state --account-name cvtfstatedev
 ```
 
+
+Local vs Variable
+Variables (zmienne)
+    - Służą jako parametry wejściowe dla modułu
+    - Mogą być nadpisywane z zewnątrz (np. przez -var, pliki .tfvars, zmienne środowiskowe)
+    - Deklarowane są w bloku variable
+    - Mogą mieć wartości domyślne, typy i ograniczenia walidacji
+    ```
+        variable "environment" {
+        type        = string
+        default     = "dev"
+        description = "Environment name (dev/prod)"
+        validation {
+            condition     = contains(["dev", "prod"], var.environment)
+            error_message = "Environment must be dev or prod."
+        }
+    }
+```
+
+Locals (lokalne)
+    - Są to stałe wewnętrzne modułu
+    - Nie mogą być zmieniane z zewnątrz
+    - Często używane do transformacji innych wartości
+    - Służą do DRY (Don't Repeat Yourself)
+    - Deklarowane w bloku locals
+
 Blob Lifecycle:
 - Blob lifecycle odnosi się do cyklu życia obiektów typu BLOB (Binary Large Object) — czyli dużych binarnych danych, takich jak pliki, obrazy, wideo
 
@@ -75,6 +110,10 @@ Blob Lifecycle Management w Azure:
     - Oszczędność kosztów – starsze dane mogą być automatycznie przenoszone do tańszych warstw.
     - Zarządzanie przestrzenią – niepotrzebne bloby są usuwane.
     - Zgodność z politykami firmy/RODO – np. usuwanie plików po X dniach.
+
+
+Block Lifecycle:
+
 
 
 Modules:

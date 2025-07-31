@@ -14,8 +14,6 @@ terraform {
 resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name # required
   location = var.location # required
-  # tags = "" optional
-  # managed_by = "" optional
 }
 
 # 2. App Service Plan (dla Function App)
@@ -27,109 +25,62 @@ resource "azurerm_service_plan" "main" {
   sku_name            = "Y1" #required / Plan zużycia
 }
 
-# 3. Storage Account
-resource "azurerm_storage_account" "storage" {
-  name                     = var.storage_account_name # required
-  resource_group_name      = azurerm_resource_group.main.name  # required
-  location                 = azurerm_resource_group.main.location  # required
-  account_tier             = "Standard"  # required
-  account_replication_type = "LRS" # required
-}
-
-resource "azurerm_storage_container" "cv" {
-  for_each = toset(["cv-safe", "cv-notsafe", "cv-quarantine"])
-  name                  = each.value 
-  storage_account_id  = azurerm_storage_account.storage.id # required
-}
-
+# Moving frontend
 moved {
-  from = azurerm_storage_container.cv_notsafe
-  to = azurerm_storage_container.cv["cv-notsafe"]
+ from =  module.infrastructure.azurerm_static_web_app.frontend
+ to = module.static_web_app.azurerm_static_web_app.frontend
 }
-
+# Moving backend
 moved {
-  from = azurerm_storage_container.cv_safe
-  to = azurerm_storage_container.cv["cv-safe"]
+  from = module.infrastructure.azurerm_linux_function_app.backend
+  to = module.function_app.azurerm_linux_function_app.backend
 }
 
+# Moving storage account
 moved {
-  from = azurerm_storage_container.cv_quarantine
-  to = azurerm_storage_container.cv["cv-quarantine"]
+  from = module.infrastructure.azurerm_storage_account.storage
+  to = module.storage.azurerm_storage_account.storage
 }
 
-# 4. Application Insights
-resource "azurerm_application_insights" "main" {
-  name                = "cvscannerappinsights2307" # required
-  location            = azurerm_resource_group.main.location # required
-  resource_group_name = azurerm_resource_group.main.name # required
-  application_type    = "web" # required
+# Moving storage container
+moved {
+  from = module.infrastructure.azurerm_storage_container.cv
+  to = module.storage.azurerm_storage_container.cv
 }
 
-output "instrumentation_key" {
-  value = azurerm_application_insights.main.instrumentation_key
-  sensitive = true
+# Moving App Insights
+moved {
+  from = module.infrastructure.azurerm_application_insights.main
+  to = module.insights.azurerm_application_insights.main
+}
+module "static-web-app" {
+  source              = "../static-web-app"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = var.location
+  static_web_app_name = var.static_web_app_name
+  repository_token    = data.azurerm_key_vault_secret.github_token.value
 }
 
-output "app_id" {
-  value = azurerm_application_insights.main.app_id
+module "function-app" {
+  source                     = "../function-app"
+  resource_group_name        = azurerm_resource_group.main.name
+  location                   = var.location
+  function_app_name          = var.function_app_name
+  service_plan_id            = azurerm_service_plan.main.id
+  storage_account_name       = module.storage.storage_account_name
+  storage_account_access_key = module.storage.primary_access_key
+  instrumentation_key        = module.insights.instrumentation_key
 }
 
-
-# 5. Function App
-resource "azurerm_linux_function_app" "backend" {
-  name                       = var.function_app_name # required
-  location                   = azurerm_resource_group.main.location 
-  resource_group_name        = azurerm_resource_group.main.name # required
-  service_plan_id            = azurerm_service_plan.main.id # required
-  storage_account_name       = azurerm_storage_account.storage.name # required
-  storage_account_access_key = azurerm_storage_account.storage.primary_access_key  # required
- 
-  site_config { # required
-    application_stack {
-      node_version = "18"
-    }
-  }
-  app_settings = {
-    APPINSIGHTS_INSTRUMENTATIONKEY = azurerm_application_insights.main.instrumentation_key
-    AzureWebJobsStorage            = azurerm_storage_account.storage.primary_connection_string
-    FUNCTIONS_EXTENSION_VERSION    = "~4"
-    FUNCTIONS_WORKER_RUNTIME       = "node"
-  }
+module "storage" {
+  source = "../storage"
+  resource_group_name  = azurerm_resource_group.main.name
+  location             = var.location
+  storage_account_name = var.storage_account_name
 }
 
-resource "azurerm_static_web_app" "frontend" {
-  name                  = "static-web-deployment"
-  resource_group_name   = azurerm_resource_group.main.name
-  location              = azurerm_resource_group.main.location
-  repository_url        = "https://github.com/pixelite88/azure-fundamentals-upskill"
-  repository_branch     = "main"
-  repository_token      = data.azurerm_key_vault_secret.github_token.value # GitHub token from Key Vault
+module "insights" {
+  source               = "../insights"
+  resource_group_name  = azurerm_resource_group.main.name
+  location             = var.location
 }
-
-# Blob Lifecycle Management
-# resource "azurerm_storage_management_policy" "main" {
-  storage_account_id   = azurerm_storage_account.storage.id
-
-  rule {
-    name    = "move-to-archive-and-delete"
-    enabled = true
-    filters {
-      prefix_match = [""]
-      blob_types = ["blockBlob"]
-    }
-
-    actions {
-      base_blob {
-        tier_to_cool_after_days_since_modification_greater_than    = 10
-        tier_to_archive_after_days_since_modification_greater_than = 50
-        delete_after_days_since_modification_greater_than          = 100
-      }
-
-      snapshot {
-        delete_after_days_since_creation_greater_than = 30
-      }
-    }
-  }
-#}
-
-data "azurerm_client_config" "current" {} # who's logged in now and using TF. 
