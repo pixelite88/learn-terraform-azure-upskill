@@ -23,17 +23,7 @@ variable "static_web_app_name" {
   type        = string
 }
 
-variable "github_token" {
-  description = "Personal access token do GitHuba"
-  sensitive   = true
-}
-
 variable "env" {
   type        = string
   description = "Environment name (eg. dev, test, prod)"
-}
-
-variable "subscription_id" {
-  type        = string
-  description = "My subscription ID"
 }

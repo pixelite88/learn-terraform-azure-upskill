@@ -16,5 +16,5 @@ module "infrastructure" {
   function_app_name     = "cvscannerfunc-${local.env}"
   static_web_app_name   = "cvstaticweb-${local.env}"
   storage_account_name  = "cvstorageacct${local.env}"
-  github_token          = var.github_token
 }
+

@@ -10,17 +10,6 @@ terraform {
   required_version = ">= 1.5.0"
 }
 
-provider "azurerm" {
-  features {
-      key_vault {
-        purge_soft_delete_on_destroy    = true
-        recover_soft_deleted_key_vaults = true
-      }
-  }
-  # skip_provider_registration = true
-  subscription_id = var.subscription_id # Wymagane, jeśli masz wiele subskrypcji
-}
-
 # 1. Resource Group
 resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name # required
@@ -47,19 +36,25 @@ resource "azurerm_storage_account" "storage" {
   account_replication_type = "LRS" # required
 }
 
-resource "azurerm_storage_container" "cv_safe" {
-  name                  = "cv-safe" # required
+resource "azurerm_storage_container" "cv" {
+  for_each = toset(["cv-safe", "cv-notsafe", "cv-quarantine"])
+  name                  = each.value 
   storage_account_id  = azurerm_storage_account.storage.id # required
 }
 
-resource "azurerm_storage_container" "cv_notsafe" {
-  name                  = "cv-notsafe" # required
-  storage_account_id  = azurerm_storage_account.storage.id # optional
+moved {
+  from = azurerm_storage_container.cv_notsafe
+  to = azurerm_storage_container.cv["cv-notsafe"]
 }
 
-resource "azurerm_storage_container" "cv_quarantine" {
-  name                  = "cv-quarantine" # required
-  storage_account_id  = azurerm_storage_account.storage.id # optional
+moved {
+  from = azurerm_storage_container.cv_safe
+  to = azurerm_storage_container.cv["cv-safe"]
+}
+
+moved {
+  from = azurerm_storage_container.cv_quarantine
+  to = azurerm_storage_container.cv["cv-quarantine"]
 }
 
 # 4. Application Insights
@@ -108,26 +103,33 @@ resource "azurerm_static_web_app" "frontend" {
   location              = azurerm_resource_group.main.location
   repository_url        = "https://github.com/pixelite88/azure-fundamentals-upskill"
   repository_branch     = "main"
-  repository_token      = var.github_token
+  repository_token      = data.azurerm_key_vault_secret.github_token.value # GitHub token from Key Vault
 }
 
-resource "azurerm_key_vault" "main" {
-  name                  = "cvscannerkeyvault2307" # required
-  location              = azurerm_resource_group.main.location # required
-  resource_group_name   = azurerm_resource_group.main.name # required
-  tenant_id             = data.azurerm_client_config.current.tenant_id # required
-  sku_name              = "standard" # required
+# Blob Lifecycle Management
+# resource "azurerm_storage_management_policy" "main" {
+  storage_account_id   = azurerm_storage_account.storage.id
 
-  
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id # required
-    object_id = data.azurerm_client_config.current.object_id  # required
+  rule {
+    name    = "move-to-archive-and-delete"
+    enabled = true
+    filters {
+      prefix_match = [""]
+      blob_types = ["blockBlob"]
+    }
+
+    actions {
+      base_blob {
+        tier_to_cool_after_days_since_modification_greater_than    = 10
+        tier_to_archive_after_days_since_modification_greater_than = 50
+        delete_after_days_since_modification_greater_than          = 100
+      }
+
+      snapshot {
+        delete_after_days_since_creation_greater_than = 30
+      }
+    }
   }
-}
-
-resource "azurerm_key_vault_secret" "main" {
-  name         = "cvscannersecret2307"
-  key_vault_id = azurerm_key_vault.main.id
-}
+#}
 
 data "azurerm_client_config" "current" {} # who's logged in now and using TF. 
