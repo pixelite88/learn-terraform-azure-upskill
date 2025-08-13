@@ -28,7 +28,7 @@ resource "azurerm_service_plan" "main" {
 # Moving frontend
 moved {
  from =  module.infrastructure.azurerm_static_web_app.frontend
- to = module.static_web_app.azurerm_static_web_app.frontend
+ to = azurerm_static_web_app.frontend
 }
 # Moving backend
 moved {
