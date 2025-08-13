@@ -33,25 +33,25 @@ moved {
 # Moving backend
 moved {
   from = module.infrastructure.azurerm_linux_function_app.backend
-  to = module.function_app.azurerm_linux_function_app.backend
+  to = azurerm_linux_function_app.backend
 }
 
 # Moving storage account
 moved {
   from = module.infrastructure.azurerm_storage_account.storage
-  to = module.storage.azurerm_storage_account.storage
+  to = azurerm_storage_account.storage
 }
 
 # Moving storage container
 moved {
   from = module.infrastructure.azurerm_storage_container.cv
-  to = module.storage.azurerm_storage_container.cv
+  to = azurerm_storage_container.cv
 }
 
 # Moving App Insights
 moved {
   from = module.infrastructure.azurerm_application_insights.main
-  to = module.insights.azurerm_application_insights.main
+  to = azurerm_application_insights.main
 }
 module "static-web-app" {
   source              = "../static-web-app"
