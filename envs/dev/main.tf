@@ -32,4 +32,3 @@ module "infrastructure" {
   static_web_app_name   = "cvstaticweb-${local.env}"
   storage_account_name  = "cvstorageacct${local.env}"
 }
-
